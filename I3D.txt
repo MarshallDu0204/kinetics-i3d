@@ -44,6 +44,14 @@ SPatial 和 temporal， 分别运算图像和光流矩阵
 
 卷积维度为3维：时序，宽，高 (可以对时序维度进行卷积) --> 3D convolution
 
+网络结构(rough)
+Sample video --> N * (Conv3D --> Maxpool3D) --> M * (Inception Model) --> Average pooling
+--> spatical_squeeze --> reduce_mean --> output
+
+矩阵在被输入到最后一个average pooling 层前的矩阵中图片宽和高为7，
+而在最后Average pooling 层对时序维度，图片宽和图片高的pooling kernel size分别为：(2,7,7)
+作用是对时序的维度除2，宽和高的维度除7，最后输出矩阵中图片的宽和高为1
+
 三维卷积与最后的average pooling后矩阵维度为(7*1*1*400)  7为时序维度卷积的结果, 1*1为空间(w*h)
 并转换(spatical_squeeze)成(7*400)后对时序维度取平均(reduce_mean)变为(None,400)
 
