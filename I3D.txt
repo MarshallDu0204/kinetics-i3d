@@ -5,10 +5,26 @@ Two-Stream Inflated 3D ConvNets (I3D)
 数据输入格式  video, label
 
 每个Epoch训练，随机从每个video中随机选取64帧 (短视频通过轮播弥补长度)
+视频的帧率为25fps每秒
 
-64帧图片通过 cv2.optflow.DualTVL1OpticalFlow_create() 方法分别计算出图片
-与前一帧图片的光流，光流间距为一帧  (此方法需要先将BGR图像转为灰度图 (256,256,3)->(256,256,1) 再输入到TVL1函数中进行光流运算，输出为(256,256,2))
+每一轮训练对轮到的视频进行一次random cropping (最短边256 --> 224*224) 
+random cropping 同时应用于光流以及原视频(RGB)
+
+由于random cropping 是作用于整个视频以及光流视频(对一个epoch中的一个视频&光流视频随机因子相同)
+，所以在视频随机选取的64帧图片,以及光流视频中对应选取的64张图片都是经过random cropping，
+且random cropping的随机因子均相同
+
+Note: 对一个视频，每一个epoch都要进行一次新的random cropping(随机因子不同)
+而且对一个视频，每一个epoch都要重新sample 64张图片以及对应的光流图
+
+64帧图片通过 cv2.optflow.DualTVL1OpticalFlow_create() TL_V1 方法分别计算出图片
+与前一帧图片的光流，光流间距为一帧  (此方法需要先将BGR图像转为灰度图 (256,256,3)->(256,256,1) 再输入到TVL1函数中进行光流运算，输出为(256,256,2) x axis + y axis)
 TVL1函数的输入为灰度图
+
+在实际应用中所有的视频都是被对应的提前计算出光流视频,帧帧对应，在每一轮训练中对一个视频先sample 64 帧，
+接下来从对应的预先计算好的光流视频中提取对应的光流帧
+
+在模型推理/测试中视频的处理由random cropping转为center cropping
 
 总共由一个视频可得出64帧图片，与64帧这些图片与他们的前一帧产生的光流
 
@@ -16,29 +32,22 @@ TVL1函数的输入为灰度图
 
 图片channel为3, 光流channel则为2
 
-数据预处理 对图片进行RandomCrop，每一组(64帧) 随机一个数进行randomcrop
-
-数据预处理 对光流图片进行RandomCrop，每一组(64帧) 随机一个数进行randomcrop
-
 接下来准备两个网络
 
 SPatial 和 temporal， 分别运算图像和光流矩阵
 
-两个网络结input channel不同
+两个网络除input channel不同,除此以外结构均相同
+(在网络的第一层output_channel 为64, 这样对channel = 2 或者 channel = 3 输出维度相同)
 
-Spatial 网络多了一步维度处理(spatial squeezes)
+两个网络的中间层都用到了Inception 的技术在每一层将输入矩阵进行分支用不同大小以及数量的卷积核对数据进行卷积
+并对几个分支产生的结果在channel维度进行拼接
 
-两个网络都用到了Inception 的技术在每一步用不同大小的卷积核对数据进行卷积并进行拼接
+卷积维度为3维：时序，宽，高 (可以对时序维度进行卷积) --> 3D convolution
 
-卷积维度为3维：时序，宽，高 (可以对时序维度进行卷积)
-
-三维卷积与最后的average pooling后矩阵维度为(7*1*1*400)  7为时序维度卷积的结果
-转换成(7*400)后对时序维度取平均变为(None,400)
+三维卷积与最后的average pooling后矩阵维度为(7*1*1*400)  7为时序维度卷积的结果, 1*1为空间(w*h)
+并转换(spatical_squeeze)成(7*400)后对时序维度取平均(reduce_mean)变为(None,400)
 
 
-训练完毕后 网络的结果以spatial:TemPoral 1:1.5 融合后进行输出
+训练完毕后 网络的结果以spatial:TemPoral 1：1 取平均后进行输出
 
 现阶段由于只有Colab, 以及云端环境，暂时无法完成训练
-
-Github link: 
-https://github.com/deepmind/kinetics-i3d
