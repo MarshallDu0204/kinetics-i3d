@@ -60,3 +60,7 @@ spatical_squeeze 为：tf.squeeze()
 训练完毕后 网络的结果以spatial:TemPoral 1：1 取平均后进行输出
 
 现阶段由于只有Colab, 以及云端环境，暂时无法完成训练
+
+b) feature base 与上面介绍RGB-D蒸馏类似，也可通过大型的teacher network训练，
+在小的student network上抽取若干层，并使得抽取层的feature map输出与teacher network上的若干层feature map 输出尽量相似
+从而实现利用轻量级网络蒸馏大型网络的信息
