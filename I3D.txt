@@ -61,6 +61,49 @@ spatical_squeeze 为：tf.squeeze()
 
 现阶段由于只有Colab, 以及云端环境，暂时无法完成训练
 
+
++---------------------------------------------------------------------+
+
+知识点补充：
+
+1）
+三维卷积在视频处理中多出了时间维度，在CT等医疗图像处理中多出了层维度(layer)
+
+2)
+对于RGB-D 数据
+
+通过3D convolution 处理RGB-D数据在实际应用中会耗费大量内存计算资源且depth维度的长度
+仅为1，所以利用3D convolution 处理RGB-D数据没有太多实际意义
+
+https://vipl.ict.ac.cn/uploadfile/upload/2020122811011776.pdf
+
+利用蒸馏的思路，在teacher netwrok上只输入Depth维度 (w*h*1) 1为depth，的图像深度数据进行训练
+网络结构为: depth input --> resnet --> fc --> 3*fc--> x,y,z
+
+在相同结构的studetn network上输入为普通的RGB图像，网络结构与teacher network相同
+蒸馏的目的是为了学生网络可以仅利用RGB图像就可以完成推理，又可以通过teacher network 学习到depth维度的信息
+
+蒸馏的第一阶段先训练teacher netwrok
+第二阶段冻结teacher network 的变量，对学生网络进行训练
+学生网络训练的loss由两部分构成: 1.最后输出结果的regression loss以及
+2.学生网络中间(1+3)fc层的输出与teacher netwrok 对应fc层输出的差(difference) 
+这两部分进行加权求和，确保学生网络在拟合的同时尽量学习teacher netwrok的信息
+(通过让学生网络的部分输出贴合teacher network的输出来实现学习teacher netwrok的信息)
+
+
+蒸馏的额外知识点补充：
+蒸馏主要有两种途径： response base 以及 feature base
+
+a) response base主要应用为分类，利用大的复杂的teacher network 训练，
+并利用轻量级的student network学习，student network 的loss 由
+1.学生网络的输出与teacher network输出的软softmax(包含负类预测)的difference 以及
+2.ground truth 的hard loss组成， 并进行加权求和
+
+teacher network 的软softmax分类可以加上温度参数(T)来放大负类预测的权重
+
+在response base 的蒸馏中学生网络通过同时拟合ground truth与teacher network
+的软softmax分类从而实现学习teacher network
+
 b) feature base 与上面介绍RGB-D蒸馏类似，也可通过大型的teacher network训练，
 在小的student network上抽取若干层，并使得抽取层的feature map输出与teacher network上的若干层feature map 输出尽量相似
 从而实现利用轻量级网络蒸馏大型网络的信息
