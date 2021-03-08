@@ -104,6 +104,7 @@ teacher network 的软softmax分类可以加上温度参数(T)来放大负类预
 在response base 的蒸馏中学生网络通过同时拟合ground truth与teacher network
 的软softmax分类从而实现学习teacher network
 
-b) feature base 与上面介绍RGB-D蒸馏类似，也可通过大型的teacher network训练，
-在小的student network上抽取若干层，并使得抽取层的feature map输出与teacher network上的若干层feature map 输出尽量相似
+b) feature base 与上面介绍RGB-D蒸馏的思路类似(网络结构相同，输入不同)也可通过预先训练大型的teacher network，
+并在小型的student network上 与大型的teacher network 上同时抽取若干层，
+并使得student network抽取层输出的feature map与teacher network上的若干层输出的feature map 尽量相似 (输入相同，网络结构不同)
 从而实现利用轻量级网络蒸馏大型网络的信息
